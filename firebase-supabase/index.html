@@ -21,6 +21,16 @@
   </nav>
 
   <!-- АВТОРИЗАЦИЯ -->
+   
+<div id="authSwitcher" class="auth-switcher">
+  <button id="showSupabaseAuth" class="primary">
+    Supabase
+  </button>
+  <button id="showFirebaseAuth" class="primary">
+    Firebase
+  </button>
+</div>
+
   <section id="authSection">
     <div class="card auth-card">
       
@@ -60,6 +70,36 @@
   </section>
 
   <!-- БАЗЫ ДАННЫХ -->
+   
+<!-- FIREBASE AUTH -->
+<section id="firebaseAuthSection" hidden>
+  <div class="card auth-card">
+
+    <div id="firebaseAuthButtons">
+      <h2>Firebase Authentication</h2>
+      <p class="muted">Вход через Google</p>
+
+      <button id="firebaseGoogleLogin" class="social">
+        <span class="google-icon">G</span>
+        <span>Продолжить с Google</span>
+      </button>
+    </div>
+
+    <div id="firebaseAuthProfile" hidden>
+      <h2>Привет, <span id="firebaseAuthName"></span>!</h2>
+
+      <h3>Пользователи Firebase</h3>
+      <ul id="firebaseAuthUsers" class="users"></ul>
+
+      <button id="firebaseLogout" class="primary full">
+        Выйти из аккаунта
+      </button>
+    </div>
+
+    <p id="firebaseAuthMessage" class="muted small"></p>
+  </div>
+</section>
+
   <section id="databaseSection" hidden>
     <div class="grid">
 

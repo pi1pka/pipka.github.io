@@ -5,6 +5,15 @@ import { initializeApp } from
 
 import { getDatabase, ref, push, get, onValue } from
   "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
+  
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+
 
 // НАСТРОЙКИ SUPABASE
 const client = window.supabase.createClient(
@@ -26,6 +35,55 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const usersRef = ref(db, "Users");
+
+// FIREBASE AUTHENTICATION
+
+const firebaseAuth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+
+$("firebaseGoogleLogin").onclick = async () => {
+  try {
+    await signInWithPopup(firebaseAuth, googleProvider);
+  } catch (error) {
+    showMessage("firebaseAuthMessage", error.message);
+  }
+};
+
+onAuthStateChanged(firebaseAuth, async user => {
+  $("firebaseAuthButtons").hidden = !!user;
+  $("firebaseAuthProfile").hidden = !user;
+
+  if (!user) {
+    $("firebaseAuthUsers").replaceChildren();
+    return;
+  }
+
+  $("firebaseAuthName").textContent =
+    user.displayName || user.email || "Пользователь";
+
+  try {
+    const snapshot = await get(usersRef);
+
+    const users = snapshot.exists()
+      ? Object.values(snapshot.val())
+      : [];
+
+    showUsers("firebaseAuthUsers", users);
+    showMessage("firebaseAuthMessage", "Вход выполнен!");
+  } catch (error) {
+    showMessage("firebaseAuthMessage", error.message);
+  }
+});
+
+$("firebaseLogout").onclick = async () => {
+  try {
+    await signOut(firebaseAuth);
+    showMessage("firebaseAuthMessage", "");
+  } catch (error) {
+    showMessage("firebaseAuthMessage", error.message);
+  }
+};
+
 
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 const $ = id => document.getElementById(id);
@@ -249,3 +307,24 @@ onValue(usersRef, snapshot => {
 loadUsers();
 loadRealtimeUsers();
 updateProfile();
+
+// ВЫБОР СИСТЕМЫ АВТОРИЗАЦИИ
+
+$("showSupabaseAuth").onclick = () => {
+  $("authSection").hidden = false;
+  $("firebaseAuthSection").hidden = true;
+};
+
+$("showFirebaseAuth").onclick = () => {
+  $("authSection").hidden = true;
+  $("firebaseAuthSection").hidden = false;
+};
+
+// Скрываем переключатель на вкладке баз данных
+$("authTab").addEventListener("click", () => {
+  $("authSwitcher").hidden = false;
+});
+
+$("databaseTab").addEventListener("click", () => {
+  $("authSwitcher").hidden = true;
+});

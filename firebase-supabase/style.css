@@ -80,3 +80,22 @@ header p {
 .auth-card .muted {
   margin-bottom: 20px;
 }
+
+.auth-switcher {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.auth-switcher button {
+  min-width: 110px;
+  padding: 9px 16px;
+  background: white;
+  color: #242424;
+  border: 1px solid #ddd;
+}
+
+.auth-switcher button:hover {
+  background: #f1f1f1;
+}
