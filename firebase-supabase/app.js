@@ -369,6 +369,16 @@ $("firebaseLogout").onclick = async () => {
   }
 };
 
+
+// УВЕДОМЛЕНИЕ APPLE
+
+$("appleLogin").addEventListener("click", () => {
+  const notice = $("appleNotice");
+
+  notice.hidden = !notice.hidden;
+});
+
+
 // ПЕРВОНАЧАЛЬНАЯ ЗАГРУЗКА
 
 loadUsers();

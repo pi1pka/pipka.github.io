@@ -99,3 +99,16 @@ header p {
 .auth-switcher button:hover {
   background: #f1f1f1;
 }
+
+
+.apple-notice {
+  padding: 12px 14px;
+  margin-top: 10px;
+  background: #f5f5f5;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  color: #666;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+}
