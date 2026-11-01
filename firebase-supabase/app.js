@@ -141,6 +141,24 @@ $("githubLogin").onclick = async () => {
   }
 };
 
+// GOOGLE АВТОРИЗАЦИЯ
+$("googleLogin").onclick = async () => {
+  showMessage("authMessage", "Переход на Google...");
+
+  const { error } = await client.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo:
+        "https://pi1pka.github.io/pipka.github.io/firebase-supabase/"
+    }
+  });
+
+  if (error) {
+    showMessage("authMessage", error.message);
+  }
+};
+
+
 // ПРОФИЛЬ ПОСЛЕ ВХОДА
 async function updateProfile() {
   const { data: { user }, error } = await client.auth.getUser();
