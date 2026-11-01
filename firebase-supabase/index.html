@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Supabase Users</title>
+</head>
+<body>
+  <!-- супабейз -->
+  <h2>Добавление пользователя</h2>
+
+  <form id="userForm">
+    <input id="username" placeholder="Логин" required>
+    <input id="password" type="password"
+           placeholder="Пароль" required>
+    <button type="submit">Добавить</button>
+  </form>
+
+  <h2>Список пользователей</h2>
+  <ul id="usersList"></ul>
+  <p id="message"></p>
+
+  <!-- супабейз с реалтайм -->
+   <h2>Supabase с Realtime</h2>
+<p>Список обновляется автоматически:</p>
+<ul id="supabaseRealtimeList"></ul>
+<p id="supabaseRealtimeMessage"></p>
+
+  <hr>
+<!-- файрбейз -->
+<h2>Firebase без Realtime</h2>
+
+<form id="firebaseForm">
+  <input id="firebaseUsername"
+         placeholder="Логин" required>
+
+  <input id="firebasePassword"
+         type="password"
+         placeholder="Тестовый пароль" required>
+
+  <button type="submit">INSERT</button>
+</form>
+
+<button id="firebaseSelect">SELECT</button>
+
+<h3>Пользователи Firebase</h3>
+<ul id="firebaseUsersList"></ul>
+<p id="firebaseMessage"></p>
+
+
+<hr>
+<!-- фаербейз реалтайм -->
+<h2>Firebase с Realtime</h2>
+<p>Список обновляется автоматически:</p>
+
+<ul id="firebaseRealtimeList"></ul>
+<p id="firebaseRealtimeMessage"></p>
+
+
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    const client = window.supabase.createClient(
+  'https://ttouujjiszknleriaotc.supabase.co',
+  'sb_publishable_G9kvkZ7u_e94QVMM7eNlgA_Sgb9-a7p'
+        );
+
+    async function loadUsers() {
+      const { data, error } = await client
+        .from('Users')
+        .select('username');
+
+      if (error) {
+        console.error(error.message);
+        return;
+      }
+      
+async function loadRealtimeUsers() {
+  const { data, error } = await client
+    .from('Users')
+    .select('username');
+
+  const list = document.getElementById('supabaseRealtimeList');
+  const message = document.getElementById('supabaseRealtimeMessage');
+
+  if (error) {
+    message.textContent = error.message;
+    return;
+  }
+
+  list.replaceChildren();
+
+  data.forEach(user => {
+    const li = document.createElement('li');
+    li.textContent = user.username;
+    list.appendChild(li);
+  });
+}
+
+loadRealtimeUsers();
+
+client
+  .channel('users-changes')
+  .on('postgres_changes', {
+    event: '*',
+    schema: 'public',
+    table: 'Users'
+  }, () => {
+    loadRealtimeUsers();
+  })
+  .subscribe(status => {
+    document.getElementById('supabaseRealtimeMessage')
+      .textContent = 'Realtime: ' + status;
+  });
+
+
+      const list = document.getElementById('usersList');
+      list.replaceChildren();
+
+      data.forEach(user => {
+        const li = document.createElement('li');
+        li.textContent = user.username;
+        list.appendChild(li);
+      });
+    }
+
+    async function addRow(event) {
+      event.preventDefault();
+
+      const username =
+        document.getElementById('username').value;
+      const password =
+        document.getElementById('password').value;
+
+      const { error } = await client
+        .from('Users')
+        .insert({ username, password });
+
+      const message = document.getElementById('message');
+
+      if (error) {
+        message.textContent = error.message;
+      } else {
+        message.textContent = 'Пользователь добавлен!';
+        document.getElementById('userForm').reset();
+        await loadUsers();
+      }
+    }
+
+    document.getElementById('userForm')
+      .addEventListener('submit', addRow);
+
+    loadUsers();
+  </script>
+  
+<script type="module">
+  import { initializeApp } from
+    "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+
+  
+import { getDatabase, ref, push, get, onValue } from
+  "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
+
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCj2TRvbdB2v5ny-SMgv7xjKLbJpwpbsis",
+    authDomain: "p1pka-11.firebaseapp.com",
+    databaseURL: "https://p1pka-11-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "p1pka-11",
+    storageBucket: "p1pka-11.firebasestorage.app",
+    messagingSenderId: "879240289141",
+    appId: "1:879240289141:web:2d0d55173aac5909d5913c"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const usersRef = ref(db, "Users");
+
+  
+onValue(usersRef, (snapshot) => {
+  const list = document.getElementById("firebaseRealtimeList");
+
+  list.replaceChildren();
+
+  if (snapshot.exists()) {
+    Object.values(snapshot.val()).forEach(user => {
+      const li = document.createElement("li");
+      li.textContent = user.username;
+      list.appendChild(li);
+    });
+  }
+
+  document.getElementById("firebaseRealtimeMessage")
+    .textContent = "Данные обновлены автоматически!";
+}, (error) => {
+  document.getElementById("firebaseRealtimeMessage")
+    .textContent = error.message;
+});
+
+
+  async function loadFirebaseUsers() {
+    const list = document.getElementById("firebaseUsersList");
+    const message = document.getElementById("firebaseMessage");
+
+    try {
+      const snapshot = await get(usersRef);
+      list.replaceChildren();
+
+      if (snapshot.exists()) {
+        Object.values(snapshot.val()).forEach(user => {
+          const li = document.createElement("li");
+          li.textContent = user.username;
+          list.appendChild(li);
+        });
+      }
+
+      message.textContent = "Данные загружены!";
+    } catch (error) {
+      message.textContent = error.message;
+    }
+  }
+
+  document.getElementById("firebaseForm")
+    .addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const username = document.getElementById("firebaseUsername").value;
+      const password = document.getElementById("firebasePassword").value;
+      const message = document.getElementById("firebaseMessage");
+
+      try {
+        await push(usersRef, { username, password });
+        message.textContent = "Пользователь добавлен!";
+        event.target.reset();
+      } catch (error) {
+        message.textContent = error.message;
+      }
+    });
+
+  document.getElementById("firebaseSelect")
+    .addEventListener("click", loadFirebaseUsers);
+</script>
+
+</body>
+</html>
