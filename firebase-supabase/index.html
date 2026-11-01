@@ -1,245 +1,137 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Supabase Users</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auth & Database</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- супабейз -->
-  <h2>Добавление пользователя</h2>
 
-  <form id="userForm">
-    <input id="username" placeholder="Логин" required>
-    <input id="password" type="password"
-           placeholder="Пароль" required>
-    <button type="submit">Добавить</button>
-  </form>
+<main class="container">
+  <header>
+    <h1>Auth & Database</h1>
+    <p>Firebase × Supabase</p>
+  </header>
 
-  <h2>Список пользователей</h2>
-  <ul id="usersList"></ul>
-  <p id="message"></p>
+  <nav class="tabs">
+    <button id="authTab" class="active">Авторизация</button>
+    <button id="databaseTab">Базы данных</button>
+  </nav>
 
-  <!-- супабейз с реалтайм -->
-   <h2>Supabase с Realtime</h2>
-<p>Список обновляется автоматически:</p>
-<ul id="supabaseRealtimeList"></ul>
-<p id="supabaseRealtimeMessage"></p>
-
-  <hr>
-<!-- файрбейз -->
-<h2>Firebase без Realtime</h2>
-
-<form id="firebaseForm">
-  <input id="firebaseUsername"
-         placeholder="Логин" required>
-
-  <input id="firebasePassword"
-         type="password"
-         placeholder="Тестовый пароль" required>
-
-  <button type="submit">INSERT</button>
-</form>
-
-<button id="firebaseSelect">SELECT</button>
-
-<h3>Пользователи Firebase</h3>
-<ul id="firebaseUsersList"></ul>
-<p id="firebaseMessage"></p>
-
-
-<hr>
-<!-- фаербейз реалтайм -->
-<h2>Firebase с Realtime</h2>
-<p>Список обновляется автоматически:</p>
-
-<ul id="firebaseRealtimeList"></ul>
-<p id="firebaseRealtimeMessage"></p>
-
-
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <script>
-    const client = window.supabase.createClient(
-  'https://ttouujjiszknleriaotc.supabase.co',
-  'sb_publishable_G9kvkZ7u_e94QVMM7eNlgA_Sgb9-a7p'
-        );
-
-    async function loadUsers() {
-      const { data, error } = await client
-        .from('Users')
-        .select('username');
-
-      if (error) {
-        console.error(error.message);
-        return;
-      }
+  <!-- АВТОРИЗАЦИЯ -->
+  <section id="authSection">
+    <div class="card auth-card">
       
-async function loadRealtimeUsers() {
-  const { data, error } = await client
-    .from('Users')
-    .select('username');
+      <div id="authButtons">
+        <h2>Добро пожаловать</h2>
+        <p class="muted">Выберите способ входа</p>
 
-  const list = document.getElementById('supabaseRealtimeList');
-  const message = document.getElementById('supabaseRealtimeMessage');
+        <button id="githubLogin" class="social">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 .8a11.2 11.2 0 0 0-3.54 21.82c.56.1.77-.24.77-.54v-2.1c-3.13.68-3.8-1.33-3.8-1.33-.51-1.3-1.25-1.25-1.65-1.02-.7.08-.69.08-.69 1.13.08 1.72 1.16 1.72 1.16 1 .1.68 2.62 3.26 1.87.1-.72.39-1.21.71-1.49-2.5-.28-5.13-1.25-5.13-5.57 0-1.23.44-2.23 1.16-3.02-.12-.28-.5-1.43.11-2.98 0 0 .95-.3 3.08 1.15a10.7 10.7 0 0 1 5.6 0c2.13-1.45 3.08-1.15 3.08-1.15.61 1.55.23 2.7.11 2.98.72.79 1.16 1.79 1.16 3.02 0 4.33-2.64 5.29-5.15 5.57.4.35.76 1.03.76 2.08v3.08c0 .3.2.65.78.54A11.2 11.2 0 0 0 12 .8Z"/>
+          </svg>
+          <span>Продолжить с GitHub</span>
+        </button>
 
-  if (error) {
-    message.textContent = error.message;
-    return;
-  }
+        <button class="social" disabled>
+          <span class="google-icon">G</span>
+          <span>Продолжить с Google</span>
+        </button>
 
-  list.replaceChildren();
+        <button class="social" disabled>
+          <span class="apple-icon">●</span>
+          <span>Продолжить с Apple</span>
+        </button>
 
-  data.forEach(user => {
-    const li = document.createElement('li');
-    li.textContent = user.username;
-    list.appendChild(li);
-  });
-}
+        <p class="muted small">
+          Google и Apple подключим позже
+        </p>
+      </div>
 
-loadRealtimeUsers();
+      <div id="authProfile" hidden>
+        <h2>Привет, <span id="authUsername"></span>!</h2>
+        <p class="muted">Пользователи из базы</p>
+        <ul id="authUsersList" class="users"></ul>
+        <button id="logoutBtn" class="primary full">
+          Выйти из аккаунта
+        </button>
+      </div>
 
-client
-  .channel('users-changes')
-  .on('postgres_changes', {
-    event: '*',
-    schema: 'public',
-    table: 'Users'
-  }, () => {
-    loadRealtimeUsers();
-  })
-  .subscribe(status => {
-    document.getElementById('supabaseRealtimeMessage')
-      .textContent = 'Realtime: ' + status;
-  });
+      <p id="authMessage" class="muted small"></p>
+    </div>
+  </section>
 
+  <!-- БАЗЫ ДАННЫХ -->
+  <section id="databaseSection" hidden>
+    <div class="grid">
 
-      const list = document.getElementById('usersList');
-      list.replaceChildren();
+      <div class="card">
+        <span class="tag">Supabase</span>
+        <h2>Без Realtime</h2>
+        <p class="muted">SELECT / INSERT</p>
 
-      data.forEach(user => {
-        const li = document.createElement('li');
-        li.textContent = user.username;
-        list.appendChild(li);
-      });
-    }
+        <form id="userForm" class="form">
+          <input id="username" placeholder="Логин" required>
+          <input id="password" type="password"
+                 placeholder="Тестовый пароль" required>
+          <button class="primary">Добавить</button>
+        </form>
 
-    async function addRow(event) {
-      event.preventDefault();
+        <h3>Пользователи</h3>
+        <ul id="usersList" class="users"></ul>
+        <p id="message" class="muted small"></p>
+      </div>
 
-      const username =
-        document.getElementById('username').value;
-      const password =
-        document.getElementById('password').value;
+      <div class="card">
+        <span class="tag">Supabase</span>
+        <h2>С Realtime</h2>
+        <p class="muted">Автоматическое обновление</p>
 
-      const { error } = await client
-        .from('Users')
-        .insert({ username, password });
+        <ul id="supabaseRealtimeList" class="users"></ul>
+        <p id="supabaseRealtimeMessage" class="muted small">
+          Подключение...
+        </p>
+      </div>
 
-      const message = document.getElementById('message');
+      <div class="card">
+        <span class="tag">Firebase</span>
+        <h2>Без Realtime</h2>
+        <p class="muted">SELECT / INSERT</p>
 
-      if (error) {
-        message.textContent = error.message;
-      } else {
-        message.textContent = 'Пользователь добавлен!';
-        document.getElementById('userForm').reset();
-        await loadUsers();
-      }
-    }
+        <form id="firebaseForm" class="form">
+          <input id="firebaseUsername" placeholder="Логин" required>
+          <input id="firebasePassword" type="password"
+                 placeholder="Тестовый пароль" required>
+          <button class="primary">INSERT</button>
+        </form>
 
-    document.getElementById('userForm')
-      .addEventListener('submit', addRow);
+        <button id="firebaseSelect" class="primary">SELECT</button>
 
-    loadUsers();
-  </script>
-  
-<script type="module">
-  import { initializeApp } from
-    "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+        <h3>Пользователи</h3>
+        <ul id="firebaseUsersList" class="users"></ul>
+        <p id="firebaseMessage" class="muted small"></p>
+      </div>
 
-  
-import { getDatabase, ref, push, get, onValue } from
-  "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
+      <div class="card">
+        <span class="tag">Firebase</span>
+        <h2>С Realtime</h2>
+        <p class="muted">Обновление через onValue()</p>
 
+        <ul id="firebaseRealtimeList" class="users"></ul>
+        <p id="firebaseRealtimeMessage" class="muted small">
+          Подключение...
+        </p>
+      </div>
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCj2TRvbdB2v5ny-SMgv7xjKLbJpwpbsis",
-    authDomain: "p1pka-11.firebaseapp.com",
-    databaseURL: "https://p1pka-11-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "p1pka-11",
-    storageBucket: "p1pka-11.firebasestorage.app",
-    messagingSenderId: "879240289141",
-    appId: "1:879240289141:web:2d0d55173aac5909d5913c"
-  };
+    </div>
+  </section>
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const usersRef = ref(db, "Users");
+  <footer>Mobile Development · Firebase & Supabase</footer>
+</main>
 
-  
-onValue(usersRef, (snapshot) => {
-  const list = document.getElementById("firebaseRealtimeList");
-
-  list.replaceChildren();
-
-  if (snapshot.exists()) {
-    Object.values(snapshot.val()).forEach(user => {
-      const li = document.createElement("li");
-      li.textContent = user.username;
-      list.appendChild(li);
-    });
-  }
-
-  document.getElementById("firebaseRealtimeMessage")
-    .textContent = "Данные обновлены автоматически!";
-}, (error) => {
-  document.getElementById("firebaseRealtimeMessage")
-    .textContent = error.message;
-});
-
-
-  async function loadFirebaseUsers() {
-    const list = document.getElementById("firebaseUsersList");
-    const message = document.getElementById("firebaseMessage");
-
-    try {
-      const snapshot = await get(usersRef);
-      list.replaceChildren();
-
-      if (snapshot.exists()) {
-        Object.values(snapshot.val()).forEach(user => {
-          const li = document.createElement("li");
-          li.textContent = user.username;
-          list.appendChild(li);
-        });
-      }
-
-      message.textContent = "Данные загружены!";
-    } catch (error) {
-      message.textContent = error.message;
-    }
-  }
-
-  document.getElementById("firebaseForm")
-    .addEventListener("submit", async (event) => {
-      event.preventDefault();
-
-      const username = document.getElementById("firebaseUsername").value;
-      const password = document.getElementById("firebasePassword").value;
-      const message = document.getElementById("firebaseMessage");
-
-      try {
-        await push(usersRef, { username, password });
-        message.textContent = "Пользователь добавлен!";
-        event.target.reset();
-      } catch (error) {
-        message.textContent = error.message;
-      }
-    });
-
-  document.getElementById("firebaseSelect")
-    .addEventListener("click", loadFirebaseUsers);
-</script>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
