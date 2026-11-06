@@ -199,6 +199,8 @@ async function loginSupabase(provider) {
 
 $("githubLogin").onclick = () => loginSupabase("github");
 $("googleLogin").onclick = () => loginSupabase("google");
+$("yandexLogin").onclick = () => loginSupabase("custom:yandex");
+
 
 // ПРОФИЛЬ SUPABASE
 
