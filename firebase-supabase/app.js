@@ -1,31 +1,38 @@
-
+// FIREBASE IMPORTS
 import { initializeApp } from
   "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
 
 import {
-  getDatabase, ref, push, get, onValue
+  getDatabase,
+  ref,
+  push,
+  get,
+  onValue
 } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
 import {
   getAuth,
   GoogleAuthProvider,
+  GithubAuthProvider,
   signInWithPopup,
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
 
-// НАСТРОЙКИ
-
+// ОБЩИЕ НАСТРОЙКИ
 const $ = id => document.getElementById(id);
 
 const redirectUrl =
   "https://pi1pka.github.io/pipka.github.io/firebase-supabase/";
 
+
+// SUPABASE
 const client = window.supabase.createClient(
   "https://ttouujjiszknleriaotc.supabase.co",
   "sb_publishable_G9kvkZ7u_e94QVMM7eNlgA_Sgb9-a7p"
 );
 
+// FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyCj2TRvbdB2v5ny-SMgv7xjKLbJpwpbsis",
   authDomain: "p1pka-11.firebaseapp.com",
@@ -42,10 +49,8 @@ const db = getDatabase(app);
 const usersRef = ref(db, "Users");
 
 const firebaseAuth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
 
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-
 function showMessage(id, text) {
   $(id).textContent = text;
 }
@@ -56,80 +61,101 @@ function showUsers(id, users) {
 
   users.forEach(user => {
     const li = document.createElement("li");
-    li.textContent = user.username || "Без имени";
+    li.textContent = user?.username ?? "Без имени";
     list.appendChild(li);
   });
 }
 
-// ГЛАВНЫЕ ВКЛАДКИ
+function getFirebaseUsers(snapshot) {
+  return snapshot.exists()
+    ? Object.values(snapshot.val())
+    : [];
+}
 
-function openTab(tab) {
-  const isAuth = tab === "auth";
+// ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК
+let currentTab = "auth";
+let currentAuth = "supabase";
 
-  $("databaseSection").hidden = isAuth;
+function updateNavigation() {
+  const isAuth = currentTab === "auth";
+  const isSupabase = currentAuth === "supabase";
+
   $("authSwitcher").hidden = !isAuth;
+  $("databaseSection").hidden = isAuth;
 
-  if (isAuth) {
-    $("authSection").hidden = currentAuth !== "supabase";
-    $("firebaseAuthSection").hidden = currentAuth !== "firebase";
-  } else {
-    $("authSection").hidden = true;
-    $("firebaseAuthSection").hidden = true;
-  }
+  $("authSection").hidden =
+    !isAuth || !isSupabase;
+
+  $("firebaseAuthSection").hidden =
+    !isAuth || isSupabase;
 
   $("authTab").classList.toggle("active", isAuth);
   $("databaseTab").classList.toggle("active", !isAuth);
-}
-
-$("authTab").onclick = () => openTab("auth");
-$("databaseTab").onclick = () => openTab("database");
-
-// ПЕРЕКЛЮЧЕНИЕ SUPABASE / FIREBASE
-
-let currentAuth = "supabase";
-
-function switchAuth(service) {
-  currentAuth = service;
-
-  $("authSection").hidden = service !== "supabase";
-  $("firebaseAuthSection").hidden = service !== "firebase";
 
   $("showSupabaseAuth").classList.toggle(
-    "active", service === "supabase"
+    "active", isSupabase
   );
 
   $("showFirebaseAuth").classList.toggle(
-    "active", service === "firebase"
+    "active", !isSupabase
   );
 }
 
-$("showSupabaseAuth").onclick = () => switchAuth("supabase");
-$("showFirebaseAuth").onclick = () => switchAuth("firebase");
+$("authTab").onclick = () => {
+  currentTab = "auth";
+  updateNavigation();
+};
 
-switchAuth("supabase");
-openTab("auth");
+$("databaseTab").onclick = () => {
+  currentTab = "database";
+  updateNavigation();
+};
+
+$("showSupabaseAuth").onclick = () => {
+  currentAuth = "supabase";
+  updateNavigation();
+};
+
+$("showFirebaseAuth").onclick = () => {
+  currentAuth = "firebase";
+  updateNavigation();
+};
+
+updateNavigation();
 
 // SUPABASE SELECT
+async function loadSupabaseUsers(elementId, messageId) {
+  try {
+    const { data, error } = await client
+      .from("Users")
+      .select("username");
 
-async function loadSupabase(id, messageId) {
-  const { data, error } = await client
-    .from("Users")
-    .select("username");
+    if (error) throw error;
 
-  if (error) {
-    if (messageId) showMessage(messageId, error.message);
-    return;
+    showUsers(elementId, data || []);
+
+    return true;
+  } catch (error) {
+    if (messageId) {
+      showMessage(messageId, error.message);
+    }
+    return false;
   }
-
-  showUsers(id, data || []);
 }
 
 async function loadUsers() {
-  await loadSupabase("usersList", "message");
+  const ok = await loadSupabaseUsers(
+    "usersList", "message"
+  );
+
+  if (ok) {
+    showMessage("message", "Данные загружены!");
+  }
 }
 
-// SUPABASE INSERT
+$("supabaseSelect").onclick = loadUsers;
 
+// SUPABASE INSERT
 $("userForm").onsubmit = async event => {
   event.preventDefault();
 
@@ -138,25 +164,26 @@ $("userForm").onsubmit = async event => {
 
   if (!username || !password) return;
 
-  const { error } = await client
-    .from("Users")
-    .insert({ username, password });
+  try {
+    const { error } = await client
+      .from("Users")
+      .insert({ username, password });
 
-  if (error) {
+    if (error) throw error;
+
+    $("userForm").reset();
+
+    await loadSupabaseUsers("usersList", "message");
+    showMessage("message", "Пользователь добавлен!");
+
+  } catch (error) {
     showMessage("message", error.message);
-    return;
   }
-
-  $("userForm").reset();
-  await loadUsers();
-
-  showMessage("message", "Пользователь добавлен!");
 };
 
 // SUPABASE REALTIME
-
 async function loadRealtimeUsers() {
-  await loadSupabase(
+  await loadSupabaseUsers(
     "supabaseRealtimeList",
     "supabaseRealtimeMessage"
   );
@@ -178,8 +205,8 @@ client
     );
   });
 
-// SUPABASE OAUTH
 
+// SUPABASE AUTH
 async function loginSupabase(provider) {
   showMessage("authMessage", "Переход к авторизации...");
 
@@ -192,27 +219,48 @@ async function loginSupabase(provider) {
     });
 
     if (error) throw error;
+
   } catch (error) {
     showMessage("authMessage", error.message);
   }
 }
 
-$("githubLogin").onclick = () => loginSupabase("github");
-$("googleLogin").onclick = () => loginSupabase("google");
-$("yandexLogin").onclick = () => loginSupabase("custom:yandex");
+// GITHUB
+$("githubLogin").onclick = () => {
+  loginSupabase("github");
+};
 
+// GOOGLE
+$("googleLogin").onclick = () => {
+  loginSupabase("google");
+};
+
+// YANDEX
+$("yandexLogin").onclick = () => {
+  loginSupabase("custom:yandex");
+};
+
+// APPLE: УВЕДОМЛЕНИЕ
+$("appleLogin").onclick = () => {
+  $("appleNotice").hidden =
+    !$("appleNotice").hidden;
+};
 
 // ПРОФИЛЬ SUPABASE
-
 async function updateSupabaseProfile() {
   try {
     const { data: { user }, error } =
       await client.auth.getUser();
 
-    if (error || !user) {
+    if (error && !user) {
+      console.warn("Supabase auth:", error.message);
+    }
+
+    if (!user) {
       $("authButtons").hidden = false;
       $("authProfile").hidden = true;
       $("authUsersList").replaceChildren();
+      showMessage("authMessage", "");
       return;
     }
 
@@ -222,45 +270,54 @@ async function updateSupabaseProfile() {
     $("authUsername").textContent =
       user.user_metadata?.user_name ||
       user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
       user.email ||
       "Пользователь";
 
-    await loadSupabase("authUsersList", "authMessage");
+    const ok = await loadSupabaseUsers(
+      "authUsersList", "authMessage"
+    );
+
+    if (ok) {
+      showMessage("authMessage", "Вход выполнен!");
+    }
 
   } catch (error) {
     showMessage("authMessage", error.message);
   }
 }
 
-// ВЫХОД ИЗ SUPABASE
-
+// SUPABASE LOGOUT
 $("logoutBtn").onclick = async () => {
-  const { error } = await client.auth.signOut();
+  try {
+    const { error } = await client.auth.signOut();
 
-  if (error) {
+    if (error) throw error;
+
+    await updateSupabaseProfile();
+
+  } catch (error) {
     showMessage("authMessage", error.message);
-    return;
   }
-
-  showMessage("authMessage", "");
-  await updateSupabaseProfile();
 };
 
+// SUPABASE AUTH STATE
 client.auth.onAuthStateChange(() => {
-  setTimeout(updateSupabaseProfile, 0);
+  setTimeout(() => {
+    updateSupabaseProfile();
+  }, 0);
 });
 
 // FIREBASE SELECT
-
 async function loadFirebaseUsers() {
   try {
     const snapshot = await get(usersRef);
 
-    const users = snapshot.exists()
-      ? Object.values(snapshot.val())
-      : [];
+    showUsers(
+      "firebaseUsersList",
+      getFirebaseUsers(snapshot)
+    );
 
-    showUsers("firebaseUsersList", users);
     showMessage("firebaseMessage", "Данные загружены!");
 
   } catch (error) {
@@ -270,8 +327,7 @@ async function loadFirebaseUsers() {
 
 $("firebaseSelect").onclick = loadFirebaseUsers;
 
-// FIREBASE INSERT
-
+// FIREBASE INSER
 $("firebaseForm").onsubmit = async event => {
   event.preventDefault();
 
@@ -284,7 +340,11 @@ $("firebaseForm").onsubmit = async event => {
     await push(usersRef, { username, password });
 
     $("firebaseForm").reset();
-    showMessage("firebaseMessage", "Пользователь добавлен!");
+
+    showMessage(
+      "firebaseMessage",
+      "Пользователь добавлен!"
+    );
 
   } catch (error) {
     showMessage("firebaseMessage", error.message);
@@ -292,13 +352,11 @@ $("firebaseForm").onsubmit = async event => {
 };
 
 // FIREBASE REALTIME
-
 onValue(usersRef, snapshot => {
-  const users = snapshot.exists()
-    ? Object.values(snapshot.val())
-    : [];
-
-  showUsers("firebaseRealtimeList", users);
+  showUsers(
+    "firebaseRealtimeList",
+    getFirebaseUsers(snapshot)
+  );
 
   showMessage(
     "firebaseRealtimeMessage",
@@ -312,23 +370,42 @@ onValue(usersRef, snapshot => {
   );
 });
 
-// FIREBASE GOOGLE AUTH
-
+// FIREBASE AUTH
+// GOOGLE
 $("firebaseGoogleLogin").onclick = async () => {
-  showMessage(
-    "firebaseAuthMessage",
-    "Открываем Google..."
-  );
-
   try {
-    await signInWithPopup(firebaseAuth, googleProvider);
+    showMessage(
+      "firebaseAuthMessage",
+      "Открываем Google..."
+    );
+
+    const provider = new GoogleAuthProvider();
+
+    await signInWithPopup(firebaseAuth, provider);
+
   } catch (error) {
     showMessage("firebaseAuthMessage", error.message);
   }
 };
 
-// FIREBASE ПРОФИЛЬ
+// GITHUB
+$("firebaseGithubLogin").onclick = async () => {
+  try {
+    showMessage(
+      "firebaseAuthMessage",
+      "Открываем GitHub..."
+    );
 
+    const provider = new GithubAuthProvider();
+
+    await signInWithPopup(firebaseAuth, provider);
+
+  } catch (error) {
+    showMessage("firebaseAuthMessage", error.message);
+  }
+};
+
+// ПРОФИЛЬ FIREBASE
 onAuthStateChanged(firebaseAuth, async user => {
   $("firebaseAuthButtons").hidden = !!user;
   $("firebaseAuthProfile").hidden = !user;
@@ -347,42 +424,35 @@ onAuthStateChanged(firebaseAuth, async user => {
   try {
     const snapshot = await get(usersRef);
 
-    const users = snapshot.exists()
-      ? Object.values(snapshot.val())
-      : [];
+    showUsers(
+      "firebaseAuthUsers",
+      getFirebaseUsers(snapshot)
+    );
 
-    showUsers("firebaseAuthUsers", users);
-    showMessage("firebaseAuthMessage", "Вход выполнен!");
+    showMessage(
+      "firebaseAuthMessage",
+      "Вход выполнен!"
+    );
 
   } catch (error) {
     showMessage("firebaseAuthMessage", error.message);
   }
+
 }, error => {
   showMessage("firebaseAuthMessage", error.message);
 });
 
-// ВЫХОД ИЗ FIREBASE
-
+// FIREBASE LOGOUT
 $("firebaseLogout").onclick = async () => {
   try {
     await signOut(firebaseAuth);
+
   } catch (error) {
     showMessage("firebaseAuthMessage", error.message);
   }
 };
 
-
-// УВЕДОМЛЕНИЕ APPLE
-
-$("appleLogin").addEventListener("click", () => {
-  const notice = $("appleNotice");
-
-  notice.hidden = !notice.hidden;
-});
-
-
-// ПЕРВОНАЧАЛЬНАЯ ЗАГРУЗКА
-
+// ЗАПУС
 loadUsers();
 loadRealtimeUsers();
 updateSupabaseProfile();
