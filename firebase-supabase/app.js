@@ -561,6 +561,7 @@ $("firebaseForm").onsubmit = async event => {
 onAuthStateChanged(fbAuth, async user => {
   const request = ++firebaseRequest;
 
+  // Отключаем старую подписку
   if (firebaseUnsubscribe) {
     firebaseUnsubscribe();
     firebaseUnsubscribe = null;
@@ -574,7 +575,10 @@ onAuthStateChanged(fbAuth, async user => {
     return;
   }
 
-  const name = user.displayName || user.email || "Пользователь";
+  const name =
+    user.displayName ||
+    user.email ||
+    "Пользователь";
 
   showProfile(
     "firebase",
@@ -587,18 +591,38 @@ onAuthStateChanged(fbAuth, async user => {
 
   updateFirebaseProviders(user);
 
+  // СНАЧАЛА ЗАГРУЖАЕМ ТАБЛИЦУ
+  startFirebaseRealtime();
+
+  // ПОТОМ ПРОВЕРЯЕМ РОЛЬ
   try {
     const role = await getFirebaseRole(user.uid);
+
     if (request !== firebaseRequest) return;
 
     setRole("firebase", role);
-    startFirebaseRealtime();
 
-    message("firebaseAuthMessage", "Вход выполнен");
+    message(
+      "firebaseAuthMessage",
+      "Вход выполнен"
+    );
+
   } catch (error) {
-    message("firebaseAuthMessage", errorText(error));
+    if (request !== firebaseRequest) return;
+
+    setRole("firebase", "user");
+
+    message(
+      "firebaseAuthMessage",
+      "Вход выполнен, но роль не загружена: " +
+      errorText(error)
+    );
   }
+
+}, error => {
+  message("firebaseAuthMessage", errorText(error));
 });
+
 
 // УДАЛЕНИЕ
 
