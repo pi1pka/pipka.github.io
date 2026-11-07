@@ -1,351 +1,239 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Authspace — Firebase & Supabase</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Firebase & Supabase</title>
   <link rel="stylesheet" href="./style.css">
 </head>
-
 <body>
-  <div class="app">
-    <aside class="sidebar">
-      <div class="brand">
-        <span class="brand-icon">A</span>
-        <span>authspace<span class="brand-dot">.</span></span>
+
+<div class="app">
+  <aside class="sidebar">
+    <nav class="navigation">
+      <button id="navSupabase" class="nav-item active">
+        ◈ Supabase
+      </button>
+      <button id="navFirebase" class="nav-item">
+        ◇ Firebase
+      </button>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <p class="breadcrumb">Workspace / Authentication</p>
+        <h1 id="pageTitle">Supabase</h1>
+        <p>Авторизация и управление пользователями</p>
+      </div>
+    </header>
+
+    <!-- SUPABASE -->
+    <section id="supabaseSection">
+      <div class="section-heading">
+        <h2>Авторизация</h2>
+        <p>Google и GitHub через Supabase Auth</p>
       </div>
 
-      <div class="sidebar-label">WORKSPACE</div>
-
-      <nav class="navigation">
-        <button id="navSupabase" class="nav-item active" type="button">
-          <span>◈</span> Supabase
-        </button>
-
-        <button id="navFirebase" class="nav-item" type="button">
-          <span>◇</span> Firebase
-        </button>
-
-        <button id="navAbout" class="nav-item" type="button">
-          <span>ⓘ</span> О проекте
-        </button>
-      </nav>
-
-      <div class="sidebar-bottom">
-        <span class="status-dot"></span>
-        Mobile Development
-        <div class="sidebar-version">Laboratory project · 2026</div>
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <div>
-          <div class="breadcrumb">Workspace / Authentication</div>
-          <h1 id="pageTitle">Supabase</h1>
-          <p id="pageSubtitle">
-            Авторизация и управление данными
-          </p>
-        </div>
-        <span class="topbar-tag">v2.0</span>
-      </header>
-
-      <!-- SUPABASE -->
-      <section id="supabaseSection" class="section">
-        <div class="section-heading">
-          <h2>Авторизация</h2>
-          <p>Google и GitHub через Supabase Auth</p>
+      <div class="panel auth-panel">
+        <div id="supabaseLogin">
+          <h3>Войти в аккаунт</h3>
+          <p class="muted">Выберите способ входа</p>
+          <div class="auth-actions">
+            <button id="supabaseGoogle" class="provider">
+              <span class="google-symbol">G</span> Google
+            </button>
+            <button id="supabaseGithub" class="provider">
+              <span class="github-symbol">GH</span> GitHub
+            </button>
+          </div>
         </div>
 
-        <div class="panel auth-panel">
-          <div id="supabaseLogin">
-            <div class="panel-title">Войти в аккаунт</div>
-            <p class="muted">
-              Выберите удобный способ авторизации.
-            </p>
+        <div id="supabaseProfile" hidden>
+          <div class="profile-line">
+            <div id="supabaseAvatar" class="avatar">U</div>
+            <div class="profile-info">
+              <strong id="supabaseName">—</strong>
+              <span id="supabaseEmail">—</span>
+            </div>
+            <span id="supabaseRole" class="role">User</span>
+          </div>
 
-            <div class="auth-actions">
-              <button id="supabaseGoogle" class="provider" type="button">
-                <span class="google-symbol">G</span>
-                Google
-              </button>
-
-              <button id="supabaseGithub" class="provider" type="button">
-                <span class="github-symbol">GH</span>
-                GitHub
-              </button>
+          <div class="profile-details">
+            <div>
+              <span>Дата регистрации</span>
+              <strong id="supabaseCreated">—</strong>
+            </div>
+            <div>
+              <span>Последний вход</span>
+              <strong id="supabaseLastLogin">—</strong>
             </div>
           </div>
 
-          <div id="supabaseProfile" hidden>
-            <div class="profile-line">
-              <div id="supabaseAvatar" class="avatar">U</div>
-              <div class="profile-info">
-                <strong id="supabaseName">Пользователь</strong>
-                <span id="supabaseEmail">—</span>
-              </div>
-              <span id="supabaseRole" class="role">User</span>
-            </div>
+          <button id="supabaseLogout" class="button secondary">
+            Выйти
+          </button>
+        </div>
 
-            <div class="profile-details">
-              <div>
-                <span>Первый вход</span>
-                <strong id="supabaseCreated">—</strong>
-              </div>
-              <div>
-                <span>Последний вход</span>
-                <strong id="supabaseLastLogin">—</strong>
-              </div>
-              <div>
-                <span>User ID</span>
-                <strong id="supabaseUid">—</strong>
-              </div>
-            </div>
+        <p id="supabaseAuthMessage" class="message"></p>
+      </div>
 
-            <button id="supabaseLogout"
-                    class="button secondary" type="button">
-              Выйти
+      <div id="supabaseData" hidden>
+        <div class="section-heading table-heading">
+          <div>
+            <h2>Пользователи</h2>
+            <p>Таблица Users · Supabase</p>
+          </div>
+          <span class="live-indicator">● Realtime</span>
+        </div>
+
+        <div class="panel">
+          <form id="supabaseForm" class="add-form">
+            <input id="supabaseUsername"
+                   placeholder="Логин"
+                   maxlength="80" required>
+            <input id="supabasePassword"
+                   type="password"
+                   placeholder="Тестовый пароль" required>
+            <button class="button primary" type="submit">
+              + Добавить
+            </button>
+          </form>
+
+          <div class="table-toolbar">
+            <strong>Список пользователей</strong>
+            <span id="supabaseCount" class="count">0 записей</span>
+          </div>
+
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th><button id="supabaseSortName" class="sort-button">Логин ↕</button></th>
+                  <th>Пароль</th>
+                  <th><button id="supabaseSortRole" class="sort-button">Роль ↕</button></th>
+                  <th><button id="supabaseSortDate" class="sort-button">Дата ↕</button></th>
+                  <th class="actions">Действия</th>
+                </tr>
+              </thead>
+              <tbody id="supabaseRows"></tbody>
+            </table>
+          </div>
+
+          <p id="supabaseDbMessage" class="message"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FIREBASE -->
+    <section id="firebaseSection" hidden>
+      <div class="section-heading">
+        <h2>Авторизация</h2>
+        <p>Google и GitHub через Firebase Auth</p>
+      </div>
+
+      <div class="panel auth-panel">
+        <div id="firebaseLogin">
+          <h3>Войти в аккаунт</h3>
+          <p class="muted">Выберите способ входа</p>
+          <div class="auth-actions">
+            <button id="firebaseGoogle" class="provider">
+              <span class="google-symbol">G</span> Google
+            </button>
+            <button id="firebaseGithub" class="provider">
+              <span class="github-symbol">GH</span> GitHub
+            </button>
+          </div>
+        </div>
+
+        <div id="firebaseProfile" hidden>
+          <div class="profile-line">
+            <div id="firebaseAvatar" class="avatar">U</div>
+            <div class="profile-info">
+              <strong id="firebaseName">—</strong>
+              <span id="firebaseEmail">—</span>
+            </div>
+            <span id="firebaseRole" class="role">User</span>
+          </div>
+
+          <div class="profile-details">
+            <div>
+              <span>Дата регистрации</span>
+              <strong id="firebaseCreated">—</strong>
+            </div>
+            <div>
+              <span>Последний вход</span>
+              <strong id="firebaseLastLogin">—</strong>
+            </div>
+          </div>
+
+          <div id="firebaseLinkBox" class="link-box">
+            <p>Подключите GitHub к существующему аккаунту.</p>
+            <button id="firebaseLinkGithub" class="button secondary">
+              Привязать GitHub
             </button>
           </div>
 
-          <p id="supabaseAuthMessage"
-             class="message" role="status"></p>
+          <button id="firebaseLogout" class="button secondary">
+            Выйти
+          </button>
         </div>
 
-        <div id="supabaseData" hidden>
-          <div class="section-heading table-heading">
-            <div>
-              <h2>База данных</h2>
-              <p>Таблица LabRecords · Supabase</p>
-            </div>
-            <span class="live-indicator">● Realtime</span>
+        <p id="firebaseAuthMessage" class="message"></p>
+      </div>
+
+      <div id="firebaseData" hidden>
+        <div class="section-heading table-heading">
+          <div>
+            <h2>Пользователи</h2>
+            <p>Узел Users · Firebase Realtime Database</p>
           </div>
-
-          <div class="panel">
-            <form id="supabaseForm" class="add-form">
-              <input id="supabaseInput"
-                     placeholder="Имя новой записи"
-                     maxlength="80"
-                     required>
-              <button class="button primary" type="submit">
-                + Добавить
-              </button>
-            </form>
-
-            <div class="table-toolbar">
-              <strong>Записи</strong>
-              <span id="supabaseCount" class="count">0 записей</span>
-            </div>
-
-            <div class="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>
-                      <button id="supabaseSortName"
-                              class="sort-button" type="button">
-                        Имя ↕
-                      </button>
-                    </th>
-                    <th>
-                      <button id="supabaseSortDate"
-                              class="sort-button" type="button">
-                        Дата ↕
-                      </button>
-                    </th>
-                    <th class="actions-column">Действия</th>
-                  </tr>
-                </thead>
-                <tbody id="supabaseRows"></tbody>
-              </table>
-            </div>
-
-            <p id="supabaseDbMessage"
-               class="message" role="status"></p>
-          </div>
-        </div>
-      </section>
-
-      <!-- FIREBASE -->
-      <section id="firebaseSection" class="section" hidden>
-        <div class="section-heading">
-          <h2>Авторизация</h2>
-          <p>Google и GitHub через Firebase Auth</p>
+          <span class="live-indicator">● Realtime</span>
         </div>
 
-        <div class="panel auth-panel">
-          <div id="firebaseLogin">
-            <div class="panel-title">Войти в аккаунт</div>
-            <p class="muted">
-              Авторизуйтесь через Google или GitHub.
-            </p>
-
-            <div class="auth-actions">
-              <button id="firebaseGoogle" class="provider" type="button">
-                <span class="google-symbol">G</span>
-                Google
-              </button>
-
-              <button id="firebaseGithub" class="provider" type="button">
-                <span class="github-symbol">GH</span>
-                GitHub
-              </button>
-            </div>
-          </div>
-
-          <div id="firebaseProfile" hidden>
-            <div class="profile-line">
-              <div id="firebaseAvatar" class="avatar">U</div>
-              <div class="profile-info">
-                <strong id="firebaseName">Пользователь</strong>
-                <span id="firebaseEmail">—</span>
-              </div>
-              <span id="firebaseRole" class="role">User</span>
-            </div>
-
-            <div class="profile-details">
-              <div>
-                <span>Первый вход</span>
-                <strong id="firebaseCreated">—</strong>
-              </div>
-              <div>
-                <span>Последний вход</span>
-                <strong id="firebaseLastLogin">—</strong>
-              </div>
-              <div>
-                <span>User ID</span>
-                <strong id="firebaseUid">—</strong>
-              </div>
-            </div>
-
-            <div id="firebaseLinkBox" class="link-box">
-              <span>
-                Есть Google-аккаунт? Можно привязать GitHub
-                для входа обоими способами.
-              </span>
-              <button id="firebaseLinkGithub"
-                      class="button secondary" type="button">
-                Привязать GitHub
-              </button>
-            </div>
-
-            <p id="firebaseProviders" class="muted"></p>
-
-            <button id="firebaseLogout"
-                    class="button secondary" type="button">
-              Выйти
+        <div class="panel">
+          <form id="firebaseForm" class="add-form">
+            <input id="firebaseUsername"
+                   placeholder="Логин"
+                   maxlength="80" required>
+            <input id="firebasePassword"
+                   type="password"
+                   placeholder="Тестовый пароль" required>
+            <button class="button primary" type="submit">
+              + Добавить
             </button>
+          </form>
+
+          <div class="table-toolbar">
+            <strong>Список пользователей</strong>
+            <span id="firebaseCount" class="count">0 записей</span>
           </div>
 
-          <p id="firebaseAuthMessage"
-             class="message" role="status"></p>
-        </div>
-
-        <div id="firebaseData" hidden>
-          <div class="section-heading table-heading">
-            <div>
-              <h2>База данных</h2>
-              <p>LabRecords · Realtime Database</p>
-            </div>
-            <span class="live-indicator">● Realtime</span>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th><button id="firebaseSortName" class="sort-button">Логин ↕</button></th>
+                  <th>Пароль</th>
+                  <th><button id="firebaseSortRole" class="sort-button">Роль ↕</button></th>
+                  <th><button id="firebaseSortDate" class="sort-button">Дата ↕</button></th>
+                  <th class="actions">Действия</th>
+                </tr>
+              </thead>
+              <tbody id="firebaseRows"></tbody>
+            </table>
           </div>
 
-          <div class="panel">
-            <form id="firebaseForm" class="add-form">
-              <input id="firebaseInput"
-                     placeholder="Имя новой записи"
-                     maxlength="80"
-                     required>
-              <button class="button primary" type="submit">
-                + Добавить
-              </button>
-            </form>
-
-            <div class="table-toolbar">
-              <strong>Записи</strong>
-              <span id="firebaseCount" class="count">0 записей</span>
-            </div>
-
-            <div class="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>
-                      <button id="firebaseSortName"
-                              class="sort-button" type="button">
-                        Имя ↕
-                      </button>
-                    </th>
-                    <th>
-                      <button id="firebaseSortDate"
-                              class="sort-button" type="button">
-                        Дата ↕
-                      </button>
-                    </th>
-                    <th class="actions-column">Действия</th>
-                  </tr>
-                </thead>
-                <tbody id="firebaseRows"></tbody>
-              </table>
-            </div>
-
-            <p id="firebaseDbMessage"
-               class="message" role="status"></p>
-          </div>
+          <p id="firebaseDbMessage" class="message"></p>
         </div>
-      </section>
+      </div>
+    </section>
+  </main>
+</div>
 
-      <!-- ИНФОРМАЦИЯ -->
-      <section id="aboutSection" class="section" hidden>
-        <div class="section-heading">
-          <h2>О проекте</h2>
-          <p>Лабораторная работа по мобильной разработке</p>
-        </div>
-
-        <div class="panel about-panel">
-          <h3>Authspace</h3>
-          <p>
-            Веб-приложение демонстрирует авторизацию
-            Google/GitHub, работу с Supabase и Firebase,
-            сортировку, Realtime и разграничение доступа.
-          </p>
-
-          <h3>Роли</h3>
-          <p>
-            User может просматривать и добавлять записи.
-            Admin дополнительно может их удалять.
-            Права проверяются на серверной стороне базы.
-          </p>
-
-          <h3>Первый и повторный вход</h3>
-          <p>
-            При первом входе создаётся учётная запись
-            Authentication. При последующих входах
-            используется существующий UID, а время
-            последнего входа обновляется.
-          </p>
-
-          <h3>Хранение файлов</h3>
-          <p>
-            Firebase Cloud Storage поддерживает
-            изображения и другие файлы. Для настройки
-            хранилища нужно проверить тариф и правила.
-          </p>
-
-          <h3>Apple Sign-In</h3>
-          <p>
-            Требует отдельной настройки Apple Developer,
-            идентификаторов приложения и OAuth-параметров.
-            В этом проекте пока не подключён.
-          </p>
-        </div>
-      </section>
-
-      <footer>Authspace · Firebase + Supabase</footer>
-    </main>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="module" src="./app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module" src="./app.js"></script>
 </body>
 </html>
