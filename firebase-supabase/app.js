@@ -506,9 +506,33 @@ $("firebaseApple").onclick = () => {
 };
 
 // Вход через Яндекс — Supabase
-$("supabaseYandex").onclick = () => {
-    loginSupabase("custom:yandex");
+
+$("supabaseYandex").onclick = async () => {
+    showMessage("supabaseAuthMessage", "Переход на Яндекс...");
+
+    try {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: "custom:yandex",
+            options: {
+                redirectTo: siteUrl,
+                skipBrowserRedirect: true
+            }
+        });
+
+        if (error) throw error;
+
+        if (!data?.url) {
+            throw new Error("Supabase не вернул ссылку для входа");
+        }
+
+        window.location.assign(data.url);
+
+    } catch (error) {
+        console.error("Yandex OAuth:", error);
+        showMessage("supabaseAuthMessage", error.message);
+    }
 };
+
 
 // Яндекс в Firebase пока не подключён
 $("firebaseYandex").onclick = () => {
