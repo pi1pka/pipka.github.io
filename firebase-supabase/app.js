@@ -489,3 +489,19 @@ async function deleteUser(service, id) {
         showMessage(`${service}DbMessage`, error.message);
     }
 }
+
+// Apple
+$("supabaseApple").onclick = () => {
+    showMessage(
+        "supabaseAuthMessage",
+        "Авторизация через Apple пока не настроена."
+    );
+};
+
+$("firebaseApple").onclick = () => {
+    showMessage(
+        "firebaseAuthMessage",
+        "Авторизация через Apple пока не настроена."
+    );
+};
+
