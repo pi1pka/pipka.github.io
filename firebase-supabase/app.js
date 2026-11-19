@@ -505,3 +505,15 @@ $("firebaseApple").onclick = () => {
     );
 };
 
+// Вход через Яндекс — Supabase
+$("supabaseYandex").onclick = () => {
+    loginSupabase("custom:yandex");
+};
+
+// Яндекс в Firebase пока не подключён
+$("firebaseYandex").onclick = () => {
+    showMessage(
+        "firebaseAuthMessage",
+        "Вход через Яндекс в Firebase пока не настроен."
+    );
+};
