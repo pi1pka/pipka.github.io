@@ -1,134 +1,57 @@
 
 import { initializeApp } from
-  "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+    "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
 
 import {
-  getDatabase, ref, push, get, onValue, remove
+    getDatabase, ref, push, onValue, remove
 } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
 import {
-  getAuth, GoogleAuthProvider, GithubAuthProvider,
-  signInWithPopup, linkWithPopup, onAuthStateChanged, signOut
+    getAuth, GoogleAuthProvider, GithubAuthProvider,
+    signInWithPopup, linkWithPopup, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
-
-// НАСТРОЙКИ
 
 const $ = id => document.getElementById(id);
 
-const SITE_URL =
-  "https://pi1pka.github.io/pipka.github.io/firebase-supabase/";
-
 const supabase = window.supabase.createClient(
-  "https://ttouujjiszknleriaotc.supabase.co",
-  "sb_publishable_G9kvkZ7u_e94QVMM7eNlgA_Sgb9-a7p"
+    "https://ttouujjiszknleriaotc.supabase.co",
+    "sb_publishable_G9kvkZ7u_e94QVMM7eNlgA_Sgb9-a7p"
 );
 
 const firebaseApp = initializeApp({
-  apiKey: "AIzaSyCj2TRvbdB2v5ny-SMgv7xjKLbJpwpbsis",
-  authDomain: "p1pka-11.firebaseapp.com",
-  databaseURL:
-    "https://p1pka-11-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "p1pka-11",
-  storageBucket: "p1pka-11.firebasestorage.app",
-  messagingSenderId: "879240289141",
-  appId: "1:879240289141:web:2d0d55173aac5909d5913c"
+    apiKey: "AIzaSyCj2TRvbdB2v5ny-SMgv7xjKLbJpwpbsis",
+    authDomain: "p1pka-11.firebaseapp.com",
+    databaseURL: "https://p1pka-11-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "p1pka-11",
+    storageBucket: "p1pka-11.firebasestorage.app",
+    messagingSenderId: "879240289141",
+    appId: "1:879240289141:web:2d0d55173aac5909d5913c"
 });
 
-const fbAuth = getAuth(firebaseApp);
-const fbDb = getDatabase(firebaseApp);
-const fbUsers = ref(fbDb, "Users");
+const auth = getAuth(firebaseApp);
+const database = getDatabase(firebaseApp);
+const usersRef = ref(database, "Users");
 
-// СОСТОЯНИЕ
+const siteUrl = "https://pi1pka.github.io/pipka.github.io/firebase-supabase/";
 
 const state = {
-  supabase: {
-    user: null,
-    role: "user",
-    rows: [],
-    sort: "username",
-    asc: true
-  },
-  firebase: {
-    user: null,
-    role: "user",
-    rows: [],
-    sort: "username",
-    asc: true
-  }
+    supabase: { user: null, role: "user", rows: [], sort: "username", asc: true },
+    firebase: { user: null, role: "user", rows: [], sort: "username", asc: true }
 };
 
+let firebaseListener = null;
 let supabaseChannel = null;
-let firebaseUnsubscribe = null;
-let supabaseRequest = 0;
-let firebaseRequest = 0;
 
-// ОБЩИЕ ФУНКЦИИ
-
-const message = (id, text = "") => {
-  $(id).textContent = text;
-};
-
-const errorText = error =>
-  error?.message || String(error);
-
-function dateText(value) {
-  if (!value) return "—";
-
-  const date = new Date(value);
-
-  return Number.isNaN(date.getTime())
-    ? "—"
-    : date.toLocaleString("ru-RU");
-}
-
-function setRole(service, role) {
-  const value = role === "admin" ? "admin" : "user";
-
-  state[service].role = value;
-
-  const badge = $(`${service}Role`);
-  badge.textContent = value === "admin" ? "Admin" : "User";
-  badge.classList.toggle("admin", value === "admin");
-
-  renderTable(service);
-}
-
-function showProfile(service, user, name, email, created, last) {
-  $(`${service}Login`).hidden = !!user;
-  $(`${service}Profile`).hidden = !user;
-  $(`${service}Data`).hidden = !user;
-
-  if (!user) {
-    state[service].rows = [];
-    setRole(service, "user");
-    return;
-  }
-
-  $(`${service}Name`).textContent = name;
-  $(`${service}Email`).textContent = email || "—";
-  $(`${service}Avatar`).textContent =
-    name.charAt(0).toUpperCase();
-
-  $(`${service}Created`).textContent = dateText(created);
-  $(`${service}LastLogin`).textContent = dateText(last);
-}
-
-// НАВИГАЦИЯ
+// Навигация
 
 function showPage(service) {
-  $("supabaseSection").hidden = service !== "supabase";
-  $("firebaseSection").hidden = service !== "firebase";
+    $("supabaseSection").hidden = service !== "supabase";
+    $("firebaseSection").hidden = service !== "firebase";
 
-  $("navSupabase").classList.toggle(
-    "active", service === "supabase"
-  );
+    $("navSupabase").classList.toggle("active", service === "supabase");
+    $("navFirebase").classList.toggle("active", service === "firebase");
 
-  $("navFirebase").classList.toggle(
-    "active", service === "firebase"
-  );
-
-  $("pageTitle").textContent =
-    service === "supabase" ? "Supabase" : "Firebase";
+    $("pageTitle").textContent = service === "supabase" ? "Supabase" : "Firebase";
 }
 
 $("navSupabase").onclick = () => showPage("supabase");
@@ -136,523 +59,433 @@ $("navFirebase").onclick = () => showPage("firebase");
 
 showPage("supabase");
 
-// СОРТИРОВКА И ТАБЛИЦА
+// Общие функции
+
+function showMessage(id, text = "") {
+    $(id).textContent = text;
+}
+
+function formatDate(value) {
+    if (!value) return "—";
+
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? "—" : date.toLocaleString("ru-RU");
+}
+
+function showProfile(service, user, name, email, created, lastLogin) {
+    $(`${service}Login`).hidden = !!user;
+    $(`${service}Profile`).hidden = !user;
+    $(`${service}Data`).hidden = !user;
+
+    if (!user) {
+        state[service].rows = [];
+        state[service].role = "user";
+        return;
+    }
+
+    $(`${service}Name`).textContent = name;
+    $(`${service}Email`).textContent = email || "—";
+    $(`${service}Avatar`).textContent = name.charAt(0).toUpperCase();
+    $(`${service}Created`).textContent = formatDate(created);
+    $(`${service}LastLogin`).textContent = formatDate(lastLogin);
+}
+
+function setRole(service, role) {
+    state[service].role = role === "admin" ? "admin" : "user";
+
+    const badge = $(`${service}Role`);
+    badge.textContent = state[service].role === "admin" ? "Admin" : "User";
+    badge.classList.toggle("admin", state[service].role === "admin");
+
+    renderTable(service);
+}
+
+// Таблица
 
 function renderTable(service) {
-  const s = state[service];
-  const tbody = $(`${service}Rows`);
+    const data = state[service];
+    const tbody = $(`${service}Rows`);
 
-  const rows = [...s.rows].sort((a, b) => {
-    let result;
+    const rows = [...data.rows].sort((a, b) => {
+        let result;
 
-    if (s.sort === "created_at") {
-      const x = new Date(a.created_at || 0).getTime();
-      const y = new Date(b.created_at || 0).getTime();
-      result = x - y;
-    } else {
-      result = String(a[s.sort] || "").localeCompare(
-        String(b[s.sort] || ""),
-        "ru",
-        { numeric: true, sensitivity: "base" }
-      );
+        if (data.sort === "created_at") {
+            result = new Date(a.created_at || 0) - new Date(b.created_at || 0);
+        } else {
+            result = String(a[data.sort] || "").localeCompare(
+                String(b[data.sort] || ""), "ru"
+            );
+        }
+
+        return data.asc ? result : -result;
+    });
+
+    tbody.replaceChildren();
+    $(`${service}Count`).textContent = `${rows.length} записей`;
+
+    if (!rows.length) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+
+        td.colSpan = 5;
+        td.className = "empty-row";
+        td.textContent = "Записей пока нет";
+
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
     }
 
-    return s.asc ? result : -result;
-  });
+    rows.forEach(user => {
+        const tr = document.createElement("tr");
 
-  tbody.replaceChildren();
+        function cell(text) {
+            const td = document.createElement("td");
+            td.textContent = text;
+            return td;
+        }
 
-  $(`${service}Count`).textContent =
-    `${rows.length} записей`;
+        const username = cell(user.username || "—");
+        const password = cell("••••••");
+        password.className = "masked-password";
 
-  if (!rows.length) {
-    const tr = document.createElement("tr");
-    const td = document.createElement("td");
-    td.colSpan = 5;
-    td.className = "empty-row";
-    td.textContent = "Записей пока нет";
-    tr.appendChild(td);
-    tbody.appendChild(tr);
-    return;
-  }
+        const roleCell = document.createElement("td");
+        const roleBadge = document.createElement("span");
 
-  for (const user of rows) {
-    const tr = document.createElement("tr");
+        roleBadge.className = user.role === "admin" ? "role admin" : "role";
+        roleBadge.textContent = user.role === "admin" ? "Admin" : "User";
+        roleCell.appendChild(roleBadge);
 
-    const cell = text => {
-      const td = document.createElement("td");
-      td.textContent = text;
-      return td;
-    };
+        const date = cell(formatDate(user.created_at));
+        const actions = document.createElement("td");
 
-    const username = cell(user.username || "—");
-    const password = cell("••••••");
-    password.className = "masked-password";
+        if (data.role === "admin") {
+            const button = document.createElement("button");
+            button.className = "delete-button";
+            button.textContent = "Удалить";
+            button.onclick = () => deleteUser(service, user.id);
+            actions.appendChild(button);
+        } else {
+            actions.textContent = "—";
+        }
 
-    const roleCell = document.createElement("td");
-    const roleBadge = document.createElement("span");
-
-    roleBadge.className =
-      user.role === "admin" ? "role admin" : "role";
-
-    roleBadge.textContent =
-      user.role === "admin" ? "Admin" : "User";
-
-    roleCell.appendChild(roleBadge);
-
-    const created = cell(dateText(user.created_at));
-    const actions = document.createElement("td");
-
-    if (s.role === "admin") {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "delete-button";
-      button.textContent = "Удалить";
-
-      button.onclick = () => deleteUser(service, user.id);
-
-      actions.appendChild(button);
-    } else {
-      actions.textContent = "—";
-    }
-
-    tr.append(username, password, roleCell, created, actions);
-    tbody.appendChild(tr);
-  }
+        tr.append(username, password, roleCell, date, actions);
+        tbody.appendChild(tr);
+    });
 }
 
 function setupSort(service) {
-  const columns = {
-    Name: ["username", "Логин"],
-    Role: ["role", "Роль"],
-    Date: ["created_at", "Дата"]
-  };
-
-  const updateLabels = () => {
-    for (const [suffix, [field, title]] of
-      Object.entries(columns)) {
-
-      const s = state[service];
-
-      $(`${service}Sort${suffix}`).textContent =
-        title + " " + (
-          s.sort === field
-            ? s.asc ? "↑" : "↓"
-            : "↕"
-        );
-    }
-  };
-
-  for (const [suffix, [field]] of Object.entries(columns)) {
-    $(`${service}Sort${suffix}`).onclick = () => {
-      const s = state[service];
-
-      s.asc = s.sort === field ? !s.asc : true;
-      s.sort = field;
-
-      updateLabels();
-      renderTable(service);
+    const columns = {
+        Name: "username",
+        Role: "role",
+        Date: "created_at"
     };
-  }
 
-  updateLabels();
+    for (const [name, field] of Object.entries(columns)) {
+        const button = $(`${service}Sort${name}`);
+
+        button.onclick = () => {
+            const data = state[service];
+
+            data.asc = data.sort === field ? !data.asc : true;
+            data.sort = field;
+
+            renderTable(service);
+        };
+    }
 }
 
 setupSort("supabase");
 setupSort("firebase");
 
-// SUPABASE AUTH
+// Supabase авторизация
 
 async function loginSupabase(provider) {
-  try {
     const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: SITE_URL }
+        provider,
+        options: { redirectTo: siteUrl }
     });
 
-    if (error) throw error;
-  } catch (error) {
-    message("supabaseAuthMessage", errorText(error));
-  }
+    if (error) showMessage("supabaseAuthMessage", error.message);
 }
 
 $("supabaseGoogle").onclick = () => loginSupabase("google");
 $("supabaseGithub").onclick = () => loginSupabase("github");
 
 $("supabaseLogout").onclick = async () => {
-  const { error } = await supabase.auth.signOut();
-
-  if (error) {
-    message("supabaseAuthMessage", errorText(error));
-  }
+    const { error } = await supabase.auth.signOut();
+    if (error) showMessage("supabaseAuthMessage", error.message);
 };
 
-// SUPABASE ROLE
-
 async function getSupabaseRole(uid) {
-  const read = async () => {
     const { data, error } = await supabase
-      .from("app_roles")
-      .select("role")
-      .eq("user_id", uid)
-      .maybeSingle();
+        .from("app_roles")
+        .select("role")
+        .eq("user_id", uid)
+        .maybeSingle();
 
     if (error) throw error;
-    return data?.role;
-  };
+    if (data) return data.role;
 
-  const existing = await read();
+    const { error: insertError } = await supabase
+        .from("app_roles")
+        .insert({ user_id: uid, role: "user" });
 
-  if (existing) return existing;
+    if (insertError && insertError.code !== "23505") throw insertError;
 
-  const { error } = await supabase
-    .from("app_roles")
-    .insert({ user_id: uid, role: "user" });
-
-  if (error && error.code !== "23505") throw error;
-
-  return (await read()) || "user";
+    return "user";
 }
 
-// SUPABASE DATABASE
-
 async function loadSupabaseUsers() {
-  const { data, error } = await supabase
-    .from("Users")
-    .select("record_id,username,role,created_at");
+    const { data, error } = await supabase
+        .from("Users")
+        .select("record_id, username, role, created_at");
 
-  if (error) {
-    message("supabaseDbMessage", errorText(error));
-    return;
-  }
+    if (error) {
+        showMessage("supabaseDbMessage", error.message);
+        return;
+    }
 
-  state.supabase.rows = (data || []).map(row => ({
-    id: row.record_id,
-    username: row.username,
-    role: row.role || "user",
-    created_at: row.created_at
-  }));
+    state.supabase.rows = (data || []).map(user => ({
+        id: user.record_id,
+        username: user.username,
+        role: user.role || "user",
+        created_at: user.created_at
+    }));
 
-  renderTable("supabase");
-  message("supabaseDbMessage");
+    renderTable("supabase");
+    showMessage("supabaseDbMessage");
 }
 
 $("supabaseForm").onsubmit = async event => {
-  event.preventDefault();
+    event.preventDefault();
 
-  if (!state.supabase.user) return;
+    const username = $("supabaseUsername").value.trim();
+    const password = $("supabasePassword").value;
 
-  const username = $("supabaseUsername").value.trim();
-  const password = $("supabasePassword").value;
+    if (!state.supabase.user || !username || !password) return;
 
-  if (!username || !password) return;
+    const { error } = await supabase.from("Users").insert({
+        username,
+        password,
+        role: "user"
+    });
 
-  try {
-    const { error } = await supabase
-      .from("Users")
-      .insert({ username, password, role: "user" });
-
-    if (error) throw error;
+    if (error) {
+        showMessage("supabaseDbMessage", error.message);
+        return;
+    }
 
     $("supabaseForm").reset();
     await loadSupabaseUsers();
-
-    message("supabaseDbMessage", "Пользователь добавлен");
-  } catch (error) {
-    message("supabaseDbMessage", errorText(error));
-  }
+    showMessage("supabaseDbMessage", "Пользователь добавлен");
 };
 
-function startSupabaseRealtime() {
-  if (supabaseChannel) return;
+async function updateSupabase() {
+    try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) throw error;
 
-  supabaseChannel = supabase
-    .channel("authspace-users")
-    .on("postgres_changes", {
-      event: "*",
-      schema: "public",
-      table: "Users"
-    }, () => {
-      if (state.supabase.user) loadSupabaseUsers();
-    })
-    .subscribe();
-}
+        state.supabase.user = user;
 
-async function refreshSupabase() {
-  const request = ++supabaseRequest;
+        if (!user) {
+            showProfile("supabase", null);
+            if (supabaseChannel) {
+                await supabase.removeChannel(supabaseChannel);
+                supabaseChannel = null;
+            }
+            return;
+        }
 
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
+        const name =
+            user.user_metadata?.user_name ||
+            user.user_metadata?.full_name ||
+            user.email ||
+            "Пользователь";
 
-    if (request !== supabaseRequest) return;
+        showProfile(
+            "supabase", user, name, user.email,
+            user.created_at, user.last_sign_in_at
+        );
 
-    state.supabase.user = user || null;
+        const role = await getSupabaseRole(user.id);
+        setRole("supabase", role);
 
-    if (!user) {
-      showProfile("supabase", null);
+        await loadSupabaseUsers();
 
-      if (supabaseChannel) {
-        const channel = supabaseChannel;
-        supabaseChannel = null;
-        await supabase.removeChannel(channel);
-      }
+        if (!supabaseChannel) {
+            supabaseChannel = supabase
+                .channel("users-realtime")
+                .on("postgres_changes", {
+                    event: "*",
+                    schema: "public",
+                    table: "Users"
+                }, loadSupabaseUsers)
+                .subscribe();
+        }
 
-      message("supabaseAuthMessage");
-      return;
+    } catch (error) {
+        showMessage("supabaseAuthMessage", error.message);
     }
-
-    const name =
-      user.user_metadata?.user_name ||
-      user.user_metadata?.full_name ||
-      user.user_metadata?.name ||
-      user.email ||
-      "Пользователь";
-
-    showProfile(
-      "supabase",
-      user,
-      name,
-      user.email,
-      user.created_at,
-      user.last_sign_in_at
-    );
-
-    const role = await getSupabaseRole(user.id);
-    if (request !== supabaseRequest) return;
-
-    setRole("supabase", role);
-    await loadSupabaseUsers();
-
-    if (request !== supabaseRequest) return;
-
-    startSupabaseRealtime();
-    message("supabaseAuthMessage", "Вход выполнен");
-
-  } catch (error) {
-    message("supabaseAuthMessage", errorText(error));
-  }
 }
 
 supabase.auth.onAuthStateChange(() => {
-  setTimeout(refreshSupabase, 0);
+    setTimeout(updateSupabase, 0);
 });
 
-refreshSupabase();
+updateSupabase();
 
-// FIREBASE AUTH
+// Firebase авторизация
 
 async function loginFirebase(provider) {
-  try {
-    message("firebaseAuthMessage");
-    await signInWithPopup(fbAuth, provider);
-  } catch (error) {
-    const text = error.code ===
-      "auth/account-exists-with-different-credential"
-        ? "Аккаунт с таким email уже существует. " +
-          "Войдите через Google и привяжите GitHub."
-        : errorText(error);
+    try {
+        await signInWithPopup(auth, provider);
+    } catch (error) {
+        let text = error.message;
 
-    message("firebaseAuthMessage", text);
-  }
+        if (error.code === "auth/account-exists-with-different-credential") {
+            text = "Этот email уже используется. Войдите через Google и привяжите GitHub.";
+        }
+
+        showMessage("firebaseAuthMessage", text);
+    }
 }
 
-$("firebaseGoogle").onclick =
-  () => loginFirebase(new GoogleAuthProvider());
+$("firebaseGoogle").onclick = () => loginFirebase(new GoogleAuthProvider());
+$("firebaseGithub").onclick = () => loginFirebase(new GithubAuthProvider());
 
-$("firebaseGithub").onclick =
-  () => loginFirebase(new GithubAuthProvider());
-
-$("firebaseLogout").onclick = async () => {
-  try {
-    await signOut(fbAuth);
-  } catch (error) {
-    message("firebaseAuthMessage", errorText(error));
-  }
-};
+$("firebaseLogout").onclick = () => signOut(auth);
 
 $("firebaseLinkGithub").onclick = async () => {
-  if (!fbAuth.currentUser) return;
-
-  try {
-    const result = await linkWithPopup(
-      fbAuth.currentUser,
-      new GithubAuthProvider()
-    );
-
-    updateFirebaseProviders(result.user);
-    message("firebaseAuthMessage", "GitHub привязан");
-  } catch (error) {
-    message("firebaseAuthMessage", errorText(error));
-  }
+    try {
+        await linkWithPopup(auth.currentUser, new GithubAuthProvider());
+        $("firebaseLinkBox").hidden = true;
+        showMessage("firebaseAuthMessage", "GitHub привязан");
+    } catch (error) {
+        showMessage("firebaseAuthMessage", error.message);
+    }
 };
-
-function updateFirebaseProviders(user) {
-  $("firebaseLinkBox").hidden = user.providerData.some(
-    p => p.providerId === "github.com"
-  );
-}
-
-// FIREBASE ROLE
-
-async function getFirebaseRole(uid) {
-  const snapshot = await get(ref(fbDb, `adminUids/${uid}`));
-
-  return snapshot.val() === true ? "admin" : "user";
-}
-
-// FIREBASE REALTIME
 
 function startFirebaseRealtime() {
-  if (firebaseUnsubscribe) firebaseUnsubscribe();
+    if (firebaseListener) firebaseListener();
 
-  firebaseUnsubscribe = onValue(
-    fbUsers,
-    snapshot => {
-      const rows = [];
+    firebaseListener = onValue(usersRef, snapshot => {
+        const rows = [];
 
-      snapshot.forEach(child => {
-        const data = child.val() || {};
+        snapshot.forEach(child => {
+            const user = child.val();
 
-        rows.push({
-          id: child.key,
-          username: data.username || "",
-          role: data.role || "user",
-          created_at: data.created_at || null
+            rows.push({
+                id: child.key,
+                username: user.username || "",
+                role: user.role || "user",
+                created_at: user.created_at || null
+            });
         });
-      });
 
-      state.firebase.rows = rows;
-      renderTable("firebase");
-      message("firebaseDbMessage");
-    },
-    error => message("firebaseDbMessage", errorText(error))
-  );
+        state.firebase.rows = rows;
+        renderTable("firebase");
+        showMessage("firebaseDbMessage");
+
+    }, error => {
+        showMessage("firebaseDbMessage", error.message);
+    });
 }
-
-// FIREBASE INSERT
 
 $("firebaseForm").onsubmit = async event => {
-  event.preventDefault();
+    event.preventDefault();
 
-  if (!fbAuth.currentUser) return;
+    const username = $("firebaseUsername").value.trim();
+    const password = $("firebasePassword").value;
 
-  const username = $("firebaseUsername").value.trim();
-  const password = $("firebasePassword").value;
+    if (!auth.currentUser || !username || !password) return;
 
-  if (!username || !password) return;
+    try {
+        await push(usersRef, {
+            username,
+            password,
+            role: "user",
+            created_at: new Date().toISOString()
+        });
 
-  try {
-    await push(fbUsers, {
-      username,
-      password,
-      role: "user",
-      created_at: new Date().toISOString()
-    });
+        $("firebaseForm").reset();
+        showMessage("firebaseDbMessage", "Пользователь добавлен");
 
-    $("firebaseForm").reset();
-    message("firebaseDbMessage", "Пользователь добавлен");
-  } catch (error) {
-    message("firebaseDbMessage", errorText(error));
-  }
+    } catch (error) {
+        showMessage("firebaseDbMessage", error.message);
+    }
 };
 
-// FIREBASE PROFILE
-
-onAuthStateChanged(fbAuth, async user => {
-  const request = ++firebaseRequest;
-
-  // Отключаем старую подписку
-  if (firebaseUnsubscribe) {
-    firebaseUnsubscribe();
-    firebaseUnsubscribe = null;
-  }
-
-  state.firebase.user = user || null;
-
-  if (!user) {
-    showProfile("firebase", null);
-    message("firebaseAuthMessage");
-    return;
-  }
-
-  const name =
-    user.displayName ||
-    user.email ||
-    "Пользователь";
-
-  showProfile(
-    "firebase",
-    user,
-    name,
-    user.email,
-    user.metadata.creationTime,
-    user.metadata.lastSignInTime
-  );
-
-  updateFirebaseProviders(user);
-
-  // СНАЧАЛА ЗАГРУЖАЕМ ТАБЛИЦУ
-  startFirebaseRealtime();
-
-  // ПОТОМ ПРОВЕРЯЕМ РОЛЬ
-  try {
-    const role = await getFirebaseRole(user.uid);
-
-    if (request !== firebaseRequest) return;
-
-    setRole("firebase", role);
-
-    message(
-      "firebaseAuthMessage",
-      "Вход выполнен"
-    );
-
-  } catch (error) {
-    if (request !== firebaseRequest) return;
-
-    setRole("firebase", "user");
-
-    message(
-      "firebaseAuthMessage",
-      "Вход выполнен, но роль не загружена: " +
-      errorText(error)
-    );
-  }
-
-}, error => {
-  message("firebaseAuthMessage", errorText(error));
-});
-
-
-// УДАЛЕНИЕ
-
-async function deleteUser(service, id) {
-  if (!state[service].user ||
-      state[service].role !== "admin") {
-    message(`${service}DbMessage`, "Недостаточно прав");
-    return;
-  }
-
-  if (!confirm("Удалить пользователя?")) return;
-
-  try {
-    if (service === "supabase") {
-      const { error } = await supabase
-        .from("Users")
-        .delete()
-        .eq("record_id", id);
-
-      if (error) throw error;
-
-      await loadSupabaseUsers();
-    } else {
-      await remove(ref(fbDb, `Users/${id}`));
+onAuthStateChanged(auth, async user => {
+    if (firebaseListener) {
+        firebaseListener();
+        firebaseListener = null;
     }
 
-    message(`${service}DbMessage`, "Запись удалена");
-  } catch (error) {
-    message(`${service}DbMessage`, errorText(error));
-  }
-}
+    state.firebase.user = user;
 
-console.log("Firebase & Supabase initialized");
+    if (!user) {
+        showProfile("firebase", null);
+        return;
+    }
+
+    showProfile(
+        "firebase",
+        user,
+        user.displayName || user.email || "Пользователь",
+        user.email,
+        user.metadata.creationTime,
+        user.metadata.lastSignInTime
+    );
+
+    $("firebaseLinkBox").hidden = user.providerData.some(
+        provider => provider.providerId === "github.com"
+    );
+
+    // Таблица загружается независимо от проверки роли
+    startFirebaseRealtime();
+
+    try {
+        const snapshot = await import(
+            "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js"
+        ).then(module =>
+            module.get(ref(database, `adminUids/${user.uid}`))
+        );
+
+        setRole("firebase", snapshot.val() === true ? "admin" : "user");
+
+    } catch (error) {
+        setRole("firebase", "user");
+        showMessage("firebaseAuthMessage", error.message);
+    }
+});
+
+// Удаление
+
+async function deleteUser(service, id) {
+    if (state[service].role !== "admin") {
+        showMessage(`${service}DbMessage`, "Недостаточно прав");
+        return;
+    }
+
+    if (!confirm("Удалить запись?")) return;
+
+    try {
+        if (service === "supabase") {
+            const { error } = await supabase
+                .from("Users")
+                .delete()
+                .eq("record_id", id);
+
+            if (error) throw error;
+            await loadSupabaseUsers();
+        } else {
+            await remove(ref(database, `Users/${id}`));
+        }
+
+        showMessage(`${service}DbMessage`, "Запись удалена");
+
+    } catch (error) {
+        showMessage(`${service}DbMessage`, error.message);
+    }
+}
