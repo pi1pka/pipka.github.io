@@ -212,10 +212,19 @@ async function loginSupabase(provider) {
 $("supabaseGoogle").onclick = () => loginSupabase("google");
 $("supabaseGithub").onclick = () => loginSupabase("github");
 
+
 $("supabaseLogout").onclick = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) showMessage("supabaseAuthMessage", error.message);
+
+    if (error && error.name !== "AuthSessionMissingError") {
+        showMessage("supabaseAuthMessage", error.message);
+        return;
+    }
+
+    showMessage("supabaseAuthMessage");
+    await updateSupabase();
 };
+
 
 async function getSupabaseRole(uid) {
     const { data, error } = await supabase
@@ -281,31 +290,50 @@ $("supabaseForm").onsubmit = async event => {
     showMessage("supabaseDbMessage", "Пользователь добавлен");
 };
 
+
 async function updateSupabase() {
     try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error) throw error;
+        const { data: { session }, error: sessionError } =
+            await supabase.auth.getSession();
 
-        state.supabase.user = user;
+        if (sessionError) throw sessionError;
 
-        if (!user) {
+        // Если пользователь вышел
+        if (!session) {
+            state.supabase.user = null;
             showProfile("supabase", null);
+            setRole("supabase", "user");
+            showMessage("supabaseAuthMessage");
+
             if (supabaseChannel) {
-                await supabase.removeChannel(supabaseChannel);
+                const channel = supabaseChannel;
                 supabaseChannel = null;
+                await supabase.removeChannel(channel);
             }
             return;
         }
 
+        const { data: { user }, error } =
+            await supabase.auth.getUser();
+
+        if (error) throw error;
+
+        state.supabase.user = user;
+
         const name =
             user.user_metadata?.user_name ||
             user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
             user.email ||
             "Пользователь";
 
         showProfile(
-            "supabase", user, name, user.email,
-            user.created_at, user.last_sign_in_at
+            "supabase",
+            user,
+            name,
+            user.email,
+            user.created_at,
+            user.last_sign_in_at
         );
 
         const role = await getSupabaseRole(user.id);
@@ -324,7 +352,18 @@ async function updateSupabase() {
                 .subscribe();
         }
 
+        // Убираем старые сообщения об ошибках
+        showMessage("supabaseAuthMessage");
+
     } catch (error) {
+        if (error.name === "AuthSessionMissingError") {
+            state.supabase.user = null;
+            showProfile("supabase", null);
+            setRole("supabase", "user");
+            showMessage("supabaseAuthMessage");
+            return;
+        }
+
         showMessage("supabaseAuthMessage", error.message);
     }
 }
