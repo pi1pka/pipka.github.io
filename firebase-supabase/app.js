@@ -580,3 +580,110 @@ $("firebaseYandex").onclick = () => {
         "Вход через Яндекс в Firebase пока не настроен."
     );
 };
+
+
+// Авторизация VK ID
+
+const vkAppId = 54880331;
+const vkRedirectUrl =
+    "https://pi1pka.github.io/pipka.github.io/firebase-supabase/";
+
+function vkMessage(text) {
+    $("vkMessage").textContent = text;
+}
+
+function vkConfig(state, verifier) {
+    if (!window.VKIDSDK) {
+        throw new Error("Не удалось загрузить VK ID SDK");
+    }
+
+    window.VKIDSDK.Config.init({
+        app: vkAppId,
+        redirectUrl: vkRedirectUrl,
+        state: state,
+        codeVerifier: verifier,
+        scope: "email"
+    });
+}
+
+// Нажатие на кнопку VK
+
+$("supabaseVk").onclick = async () => {
+    try {
+        const state = crypto.randomUUID();
+
+        const verifier = Array.from(
+            crypto.getRandomValues(new Uint8Array(32)),
+            b => b.toString(16).padStart(2, "0")
+        ).join("");
+
+        sessionStorage.setItem("vk_state", state);
+        sessionStorage.setItem("vk_verifier", verifier);
+
+        vkConfig(state, verifier);
+        vkMessage("Переход на VK ID...");
+
+        await window.VKIDSDK.Auth.login();
+
+    } catch (error) {
+        vkMessage(error.message || "Ошибка авторизации VK");
+    }
+};
+
+// Возвращение на сайт после VK
+
+async function checkVkCallback() {
+    const params = new URLSearchParams(window.location.search);
+
+    if (!params.has("code") || !params.has("device_id")) {
+        return;
+    }
+
+    const state = sessionStorage.getItem("vk_state");
+    const verifier = sessionStorage.getItem("vk_verifier");
+
+    if (!state || !verifier || params.get("state") !== state) {
+        vkMessage("Ошибка проверки состояния авторизации VK");
+        return;
+    }
+
+    try {
+        vkMessage("Получаем данные VK ID...");
+
+        vkConfig(state, verifier);
+
+        const token = await window.VKIDSDK.Auth.exchangeCode(
+            params.get("code"),
+            params.get("device_id"),
+            verifier
+        );
+
+        const result = await window.VKIDSDK.Auth.userInfo(
+            token.access_token
+        );
+
+        const user = result.user;
+
+        vkMessage(
+            "VK ID подтвердил вход: " +
+            [user.first_name, user.last_name].filter(Boolean).join(" ")
+        );
+
+        sessionStorage.removeItem("vk_state");
+        sessionStorage.removeItem("vk_verifier");
+
+        window.history.replaceState(
+            null,
+            "",
+            window.location.pathname
+        );
+
+    } catch (error) {
+        vkMessage(
+            "Ошибка VK ID: " +
+            (error.error_description || error.message || error.error || "Неизвестная ошибка")
+        );
+    }
+}
+
+checkVkCallback();
